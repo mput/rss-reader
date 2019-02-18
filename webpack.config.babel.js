@@ -9,7 +9,6 @@ const devServerMode = process.env.DEV_SERV === 'true';
 
 export default {
   mode: process.env.NODE_ENV || 'development',
-  devtool: 'source-map',
 
   devServer: {
     host: '0.0.0.0',
@@ -37,21 +36,9 @@ export default {
           }, {
             loader: 'postcss-loader',
           }, {
-            loader: 'resolve-url-loader',
-          }, {
             loader: 'sass-loader',
-            options: {
-              sourceMap: true,
-            },
           },
         ],
-      },
-      {
-        test: /\.pug$/,
-        loader: 'pug-loader',
-        options: {
-          pretty: true,
-        },
       },
     ],
   },
@@ -59,9 +46,7 @@ export default {
 
   plugins: [
     new HtmlWebpackPlugin({
-      filename: 'index.html',
-      template: './src/index.pug',
-      inject: false,
+      template: './index.html',
     }),
     new MiniCssExtractPlugin({
       filename: '[name].css',

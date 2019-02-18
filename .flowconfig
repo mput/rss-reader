@@ -1,4 +1,3 @@
 [options]
 module.name_mapper='.*\(.css\)' -> 'CSSModule'
 module.system=haste
-strip_root=true

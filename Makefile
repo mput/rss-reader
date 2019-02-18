@@ -1,12 +1,15 @@
 start:
-	npm run start
+	npx webpack-dev-server
 
 start-dev-server:
-	DEV_SERV=true npm run start
+	DEV_SERV=true npx webpack-dev-server
 
 build:
 	rm -rf dist
-	NODE_ENV=production npm run webpack
+	NODE_ENV=production npx webpack
 
 lint:
-	npm run lint
+	npx eslint .
+
+flow:
+	npx flow
