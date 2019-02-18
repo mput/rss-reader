@@ -5,7 +5,6 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const devMode = process.env.NODE_ENV !== 'production';
 const devServerMode = process.env.DEV_SERV === 'true';
 
 export default {
@@ -17,12 +16,7 @@ export default {
     port: '5656',
     disableHostCheck: devServerMode,
     public: devServerMode ? process.env.DEV_HOST : '',
-    // watchOptions: {
-    //   poll: true,
-    // },
   },
-
-  entry: ['./src/index.js'],
 
   module: {
     rules: [
@@ -37,7 +31,7 @@ export default {
       {
         test: /\.scss$/,
         use: [
-          devMode ? 'style-loader' : MiniCssExtractPlugin.loader,
+          MiniCssExtractPlugin.loader,
           {
             loader: 'css-loader',
           }, {
@@ -52,45 +46,12 @@ export default {
           },
         ],
       },
-
       {
         test: /\.pug$/,
         loader: 'pug-loader',
         options: {
           pretty: true,
         },
-      },
-
-      {
-        test: /\.(png|jpg|gif|svg|ico)$/,
-        use: [
-          {
-            loader: 'file-loader',
-            options: {
-              name: '[name].[ext]',
-              outputPath: 'img/',
-            },
-          },
-          {
-            loader: 'image-webpack-loader',
-            options: {
-              mozjpeg: {
-                progressive: true,
-                quality: 60,
-              },
-              optipng: {
-                enabled: false,
-              },
-              pngquant: {
-                quality: '65-85',
-                speed: 4,
-              },
-              gifsicle: {
-                interlaced: false,
-              },
-            },
-          },
-        ],
       },
     ],
   },
