@@ -1,0 +1,22 @@
+doctype html
+html(lang='ru')
+  head
+    title RSS-Reader
+    meta(name='description', content='Simple RSS-Reader web-app')
+    meta(charset='utf-8')
+    meta(name='viewport' content='width=device-width, initial-scale=1, viewport-fit=cover')
+    each css in htmlWebpackPlugin.files.css
+      link(rel='stylesheet' type='text/css' href= css)
+  body
+    block body
+      .jumbotron
+        h1.display-4 RSS-Reader
+        form#add-url
+          .form-group
+            label.my-1.mr-2(for='rss-url') Add RSS url:
+            input.form-control#rss-url(type='text', name='rss-url' placeholder='https://...')
+          .form-group
+            button.btn.btn-primary(type='submit') Add
+
+    each js in htmlWebpackPlugin.files.js
+      script(type='text/javascript' src= js)
