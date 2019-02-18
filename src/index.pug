@@ -9,12 +9,56 @@ html(lang='ru')
       link(rel='stylesheet' type='text/css' href= css)
   body
     block body
-      .jumbotron
-        h1.display-4 RSS-Reader
-        form.input-group#add-url
-          input.form-control(type='text', name='rss-url' placeholder='https://')
-          .input-group-append
-            button.btn.btn-outline-secondary(type="submit") Add RSS
+      .navbar.navbar-light.bg-light.bg-light
+        a(href='/').navbar-brand Light RSS
+      .container-fluid
+        .row
+          aside.col-12.col-md-5.col-lg-4.col-xl-3
+            .add-form.py-4
+              label(for='add-url').h6 Add RSS:
+              form.input-group#add-url
+                input.form-control(type='text', name='rss-url' placeholder='https://')
+                .input-group-append
+                  button.btn.btn-outline-secondary(type="submit") +
+            .list-group
+              a(href='#').list-group-item.list-group-item-action.active
+                .d-flex.w-100.justify-content-between
+                  h5.mb-1 Flex blacks news
+                  small 2 hours
+                p.mb-1 Description of this interesting feed.
+              a(href='#').list-group-item.list-group-item-action
+                .d-flex.w-100.justify-content-between
+                  h5.mb-1 Flex blacks news
+                  small 2 hours
+                p.mb-1 Description of this interesting feed.
+              a(href='#').list-group-item.list-group-item-action
+                .d-flex.w-100.justify-content-between
+                  h5.mb-1 Flex blacks news
+                  small 2 hours
+                p.mb-1 Description of this interesting feed.
+          .col-auto
+            h2.py-3 All articles:
+            ul.list-unstyled.rss-feeds
+              li.d-block.media.pb-2.pt-2.border-bottom.border-grey.position-relative
+                .media-body
+                  h5.mt-0.mb-1 Flex blacks news
+                  p.mb-2 Description of this interesting feed.
+                  a.stretched-link(href="#") Читать.
+              li.d-block.media.pb-2.pt-2.border-bottom.border-grey.position-relative
+                .media-body
+                  h5.mt-0.mb-1 Flex blacks news
+                  p.mb-2 Description of this interesting feed.
+                  a.stretched-link(href="#") Читать.
+              li.d-block.media.pb-2.pt-2.border-bottom.border-grey.position-relative
+                .media-body
+                  h5.mt-0.mb-1 Flex blacks news
+                  p.mb-2 Description of this interesting feed.
+                  a.stretched-link(href="#") Читать.
+              li.d-block.media.pb-2.pt-2.border-bottom.border-grey.position-relative
+                .media-body
+                  h5.mt-0.mb-1 Flex blacks news
+                  p.mb-2 Description of this interesting feed.
+                  a.stretched-link(href="#") Читать.
 
     each js in htmlWebpackPlugin.files.js
       script(type='text/javascript' src= js)

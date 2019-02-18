@@ -1,7 +1,7 @@
 // @flow
 
 import 'bootstrap';
-import './style.scss';
+import './styles/style.scss';
 import init from './init';
 
 init();
