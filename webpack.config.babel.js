@@ -9,6 +9,7 @@ const devServerMode = process.env.DEV_SERV === 'true';
 
 export default {
   mode: process.env.NODE_ENV || 'development',
+  devtool: 'source-map',
 
   devServer: {
     host: '0.0.0.0',
