@@ -9,13 +9,11 @@
   </head>
 
   <body>
-    <div class="navbar navbar-light bg-light bg-light">
-      <a class="navbar-brand" href="/">Light RSS</a></div>
-    <div class="container-fluid">
+    <div class="container-fluid mt-3">
       <div class="row">
-        <aside class="col-12 col-md-5 col-lg-4 col-xl-3">
+        <aside class="col-12 col-md-5 col-lg-4 col-xl-3 pl-3">
           <div class="add-form py-4">
-            <label class="h6 mb-2" for="add-url">Add RSS:</label>
+            <label class="h5 mb-2 ml-1" for="add-url">Add RSS:</label>
             <form class="input-group" id="add-url" novalidate>
               <input class="form-control" id="rss-url" type="text" name="rss-url" placeholder="https://">
               <div class="input-group-append">
@@ -36,8 +34,8 @@
           </div>
         </aside>
 
-        <div class="col">
-          <h2 class="pt-3 pl-4">All articles:</h2>
+        <div class="col articles-col d-none">
+          <h2 class="pt-3 pl-4">Articles:</h2>
           <div class="rss-link-list">
             <ul class="articles-list list-group list-group-flush">
             </ul>
