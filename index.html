@@ -9,16 +9,20 @@
   </head>
 
   <body>
-    <div class="navbar navbar-light bg-light bg-light"><a class="navbar-brand" href="/">Light RSS</a></div>
+    <div class="navbar navbar-light bg-light bg-light">
+      <a class="navbar-brand" href="/">Light RSS</a></div>
     <div class="container-fluid">
       <div class="row">
         <aside class="col-12 col-md-5 col-lg-4 col-xl-3">
           <div class="add-form py-4">
-            <label class="h6" for="add-url">Add RSS:</label>
+            <label class="h6 mb-2" for="add-url">Add RSS:</label>
             <form class="input-group" id="add-url" novalidate>
               <input class="form-control" id="rss-url" type="text" name="rss-url" placeholder="https://">
               <div class="input-group-append">
-                <button class="btn btn-outline-secondary" type="submit" disabled>+</button>
+                <button class="btn btn-outline-secondary" type="submit" disabled>
+                  <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                  Add
+                </button>
               </div>
               <div class="invalid-feedback">
                 Something goes wrong

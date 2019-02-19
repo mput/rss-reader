@@ -34,10 +34,12 @@ export default () => {
   const urlInput = formElement.querySelector('[name="rss-url"]');
   const invalidFeedback = formElement.querySelector('.invalid-feedback');
   const submitBtn = formElement.querySelector('button[type="submit"]');
+  const submitBtnSpinner = submitBtn.querySelector('.spinner-border');
 
   watch(state, 'urlForm', () => {
     submitBtn.disabled = state.urlForm.disabled;
     invalidFeedback.textContent = state.urlForm.errorMsg;
+
     if (state.urlForm.validness === 'unknown') {
       urlInput.classList.remove('is-invalid');
       urlInput.classList.remove('is-valid');
@@ -47,6 +49,12 @@ export default () => {
     } else if (state.urlForm.validness === 'valid') {
       urlInput.classList.add('is-valid');
       urlInput.classList.remove('is-invalid');
+    }
+
+    if (state.urlForm.isWaiting) {
+      submitBtnSpinner.classList.remove('d-none');
+    } else {
+      submitBtnSpinner.classList.add('d-none');
     }
   });
 
@@ -98,29 +106,21 @@ export default () => {
   formElement.addEventListener('submit', async (e) => {
     e.preventDefault();
     state.urlForm.disabled = true;
+    state.urlForm.isWaiting = true;
+
     const feedUrl = urlInput.value;
     try {
       const feed = new RssFeed(feedUrl);
       await feed.update();
       state.feeds = [...state.feeds, feed];
+      state.urlForm.validness = 'unknown';
+      urlInput.value = '';
     } catch (error) {
       state.urlForm.validness = 'invalid';
       state.urlForm.errorMsg = 'Something wrong with this feed';
-      return;
     }
-    state.urlForm.validness = 'unknown';
-    urlInput.value = '';
+
     state.urlForm.disabled = false;
+    state.urlForm.isWaiting = false;
   });
-
-
-  const addDefault = (links) => {
-    const feeds = links.map(link => new RssFeed(link));
-    Promise.all(feeds.map(feed => feed.update()))
-      .then(() => {
-        state.feeds = [...state.feeds, ...feeds];
-      });
-  };
-  const links = ['https://habr.com/ru/rss/best/daily/?fl=ru'];
-  addDefault(links);
 };
