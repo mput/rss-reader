@@ -1,9 +1,10 @@
 import '@babel/polyfill';
 import validator from 'validator';
-import { watch } from 'melanke-watchjs';
-import _ from 'lodash';
+import { watch, callWatchers } from 'melanke-watchjs';
+import axios from 'axios';
 
-import RssFeed from './RssFeed';
+import parseRSS from './parseRSS';
+
 
 const chenkItput = (url, presentFeeds) => {
   if (!validator.isURL(url)) {
@@ -15,14 +16,39 @@ const chenkItput = (url, presentFeeds) => {
   return false;
 };
 
+const proxyUrl = url => `https://cors-anywhere.herokuapp.com/${url}`;
+
+const allFeedLink = `
+  <a class="feed-item list-group-item list-group-item-action active" data-feed-id="all" href="#">
+    <div class="d-flex w-100 justify-content-between">
+      <h6 class="mb-1">All</h5>
+    </div>
+  </a>`;
+
+const feedItemTemplate = ({ title, description, link, id }) => `
+  <a class="feed-item list-group-item list-group-item-action" data-feed-id="${id}" href="#${link}">
+    <div class="d-flex w-100 justify-content-between">
+      <h6 class="mb-1">${title}</h5>
+    </div>
+    <p class="mb-1">${description}</p>
+  </a>`;
+
+const articleItemTemplate = (item, feedId) => `
+  <li class="list-group-item">
+    <button type="button" class="btn btn-outline-info btn-sm mr-2" data-toggle="modal" data-target="#modal" data-item-id="${item.id}" data-feed-id="${feedId}">Preview</button>
+    <a href="${item.link}">${item.title}</a>
+  </li> `;
+
+const buildArtticlesForFeed = feed => feed.items.map(item => articleItemTemplate(item, feed.id)).join('\n');
+
 export default () => {
   const state = {
     feeds: [],
+    feedToShow: 'all', // feedId
     urlForm: {
       state: 'empty', // valid, invalid, waiting
-      disabled: false,
-      isWaiting: false,
       errorMsg: '',
+      successMsg: '',
     },
     alerts: {
       success: '',
@@ -72,32 +98,24 @@ export default () => {
   const arcticlesList = document.querySelector('.articles-list');
   const contentPane = document.querySelector('.content-row');
 
-  const feedTemplate = (title, description, link) => `
-  <a class="feed-item list-group-item list-group-item-action" href="${link}">
-    <div class="d-flex w-100 justify-content-between">
-      <h6 class="mb-1">${title}</h5>
-    </div>
-    <p class="mb-1">${description}</p>
-  </a>`;
-
-  const articleTemplate = (title, link, description) => `
-  <li class="list-group-item">
-    <button type="button" class="btn btn-outline-info btn-sm mr-2" data-toggle="modal" data-target="#modal" data-title="${title}" data-description='${description}' data-href="${link}">Preview</button>
-    <a href="${link}">${title}</a>
-  </li> `;
 
   watch(state, 'feeds', () => {
     if (state.feeds.length > 0) {
       contentPane.classList.remove('d-none');
     }
-    const feeds = state.feeds
-      .map(({ channel: { title, description, link } }) => feedTemplate(title, description, link))
-      .join('\n');
-    feedsList.innerHTML = feeds;
-    const articles = _.flatten(state.feeds.map(({ items }) => items))
-      .map(({ title, link, description }) => articleTemplate(title, link, description))
-      .join('\n');
-    arcticlesList.innerHTML = articles;
+    const feeds = state.feeds.map(feed => feedItemTemplate(feed));
+    const feedsHTML = [allFeedLink, ...feeds].join('\n');
+    feedsList.innerHTML = feedsHTML;
+    callWatchers(state, 'feedToShow');
+  });
+
+  watch(state, 'feedToShow', () => {
+    const feeds = state.feedToShow === 'all' ? state.feeds : state.feeds.filter(({ id }) => id === state.feedToShow);
+    const itmesHTML = feeds.map(feed => buildArtticlesForFeed(feed)).join('\n');
+    arcticlesList.innerHTML = itmesHTML;
+
+    feedsList.querySelector('.active').classList.remove('active');
+    feedsList.querySelector(`[data-feed-id=${state.feedToShow}]`).classList.add('active');
   });
 
   urlInput.addEventListener('input', (e) => {
@@ -119,11 +137,11 @@ export default () => {
     e.preventDefault();
     state.urlForm.state = 'waiting';
 
-    const feedUrl = urlInput.value;
+    const url = urlInput.value;
     try {
-      const feed = new RssFeed(feedUrl);
-      await feed.update();
-      state.feeds = [...state.feeds, feed];
+      const { data } = await axios.get(proxyUrl(url));
+      const feed = parseRSS(data);
+      state.feeds = [feed, ...state.feeds];
       state.urlForm.state = 'empty';
       urlInput.value = '';
     } catch (error) {
@@ -132,14 +150,29 @@ export default () => {
     }
   });
 
+  feedsList.addEventListener('click', (event) => {
+    event.preventDefault();
+    const link = event.target.closest('.feed-item');
+    if (!link) {
+      return;
+    }
+    const id = link.dataset.feedId;
+    state.feedToShow = id;
+  });
+
   $('#modal').on('show.bs.modal', (event) => {
     const button = $(event.relatedTarget);
-    const title = button.data('title');
-    const description = button.data('description');
-    const href = button.data('href');
-    const modal = $(this);
+    const feedId = button.data('feed-id');
+    const itemId = button.data('item-id');
+    const feed = state.feeds.find(({ id }) => id === feedId);
+    console.log(feed);
+    const { description, title, link } = feed.items.find(({ id }) => id === itemId);
+
+    const modal = $(event.currentTarget);
+    console.log(modal);
+
     modal.find('.modal-title').text(title);
-    modal.find('.description').text(description);
-    modal.find('.open-link').attr('href', href);
+    modal.find('.description').html(description);
+    modal.find('.open-link').attr('href', link);
   });
 };
