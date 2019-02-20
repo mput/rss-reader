@@ -9,13 +9,15 @@
   </head>
 
   <body>
-    <div class="container-fluid mt-3">
+    <div class="container mt-3">
+
       <div class="row">
-        <aside class="col-12 col-md-5 col-lg-4 col-xl-3 pl-3">
+        <div class="col"></div>
+        <div class="col-12 col-md-10 col-lg-8 col-xl-7 pl-3">
           <div class="add-form py-4">
-            <label class="h5 mb-2 ml-1" for="add-url">Add RSS:</label>
+            <label class="display-4 mb-3 ml-1" for="add-url">Add RSS:</label>
             <form class="input-group" id="add-url" novalidate>
-              <input class="form-control" id="rss-url" type="text" name="rss-url" placeholder="https://">
+              <input class="form-control form-control-lg" id="rss-url" type="text" name="rss-url" placeholder="https://">
               <div class="input-group-append">
                 <button class="btn btn-outline-secondary" type="submit" disabled>
                   <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
@@ -30,11 +32,18 @@
               </div>
             </form>
           </div>
+        </div>
+        <div class="col"></div>
+      </div>
+
+      <div class="content-row row d-none">
+        <aside class="col-12 col-md-6 col-lg-5 pl-3">
+          <h2 class="pt-3 pl-4">Feeds:</h2>
           <div class="list-group feed">
           </div>
         </aside>
 
-        <div class="col articles-col d-none">
+        <div class="col articles-col ">
           <h2 class="pt-3 pl-4">Articles:</h2>
           <div class="rss-link-list">
             <ul class="articles-list list-group list-group-flush">

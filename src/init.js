@@ -59,7 +59,7 @@ export default () => {
   });
 
 
-  const articlesCol = document.querySelector('.articles-col');
+  const contentPane = document.querySelector('.content-row');
   const feedsList = document.querySelector('.feed');
   const feedTemplate = (title, description, link) => `
   <a class="feed-item list-group-item list-group-item-action" href="${link}">
@@ -76,7 +76,7 @@ export default () => {
 
   watch(state, 'feeds', () => {
     if (state.feeds.length > 0) {
-      articlesCol.classList.remove('d-none');
+      contentPane.classList.remove('d-none');
     }
     const feeds = state.feeds
       .map(({ channel: { title, description, link } }) => feedTemplate(title, description, link))
