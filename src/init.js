@@ -69,8 +69,10 @@ export default () => {
     <p class="mb-1">${description}</p>
   </a>`;
   const arcticlesList = document.querySelector('.articles-list');
-  const articleTemplate = (title, link) => `
+
+  const articleTemplate = (title, link, description) => `
   <li class="list-group-item">
+    <button type="button" class="btn btn-outline-info btn-sm mr-2" data-toggle="modal" data-target="#modal" data-title="${title}" data-description='${description}' data-href="${link}">Preview</button>
     <a href="${link}">${title}</a>
   </li> `;
 
@@ -83,7 +85,7 @@ export default () => {
       .join('\n');
     feedsList.innerHTML = feeds;
     const articles = _.flatten(state.feeds.map(({ items }) => items))
-      .map(({ title, link }) => articleTemplate(title, link))
+      .map(({ title, link, description }) => articleTemplate(title, link, description))
       .join('\n');
     arcticlesList.innerHTML = articles;
   });
@@ -124,8 +126,20 @@ export default () => {
       state.urlForm.validness = 'invalid';
       state.urlForm.errorMsg = 'Something wrong with this feed';
     }
-
     state.urlForm.disabled = false;
     state.urlForm.isWaiting = false;
   });
+
+  $('#modal').on('show.bs.modal', function (event) {
+    const button = $(event.relatedTarget);
+    const recipient = button.data('whatever') // Extract info from data-* attributes
+    const title = button.data('title');
+    const description = button.data('description');
+    const href = button.data('href');
+    const modal = $(this);
+    modal.find('.modal-title').text(title);
+    modal.find('.description').text(description);
+    modal.find('.open-link').attr('href', href);
+  });
+
 };
