@@ -16,17 +16,22 @@ const chenkItput = (url, presentFeeds) => {
   return false;
 };
 
+const findItem = (feeds, feedId, itemId) => {
+  const feed = feeds.find(({ id }) => id === feedId);
+  return feed.items.find(({ id }) => id === itemId);
+};
+
 const proxyUrl = url => `https://cors-anywhere.herokuapp.com/${url}`;
 
 const allFeedLink = `
-  <a class="feed-item list-group-item list-group-item-action active" data-feed-id="all" href="#">
+  <a class="feed-item list-group-item list-group-item-action list-group-item-light active" data-feed-id="all" href="#">
     <div class="d-flex w-100 justify-content-between">
       <h6 class="mb-1">All</h5>
     </div>
   </a>`;
 
 const feedItemTemplate = ({ title, description, link, id }) => `
-  <a class="feed-item list-group-item list-group-item-action" data-feed-id="${id}" href="#${link}">
+  <a class="feed-item list-group-item list-group-item-action list-group-item-light" data-feed-id="${id}" href="#${link}">
     <div class="d-flex w-100 justify-content-between">
       <h6 class="mb-1">${title}</h5>
     </div>
@@ -113,7 +118,6 @@ export default () => {
     const feeds = state.feedToShow === 'all' ? state.feeds : state.feeds.filter(({ id }) => id === state.feedToShow);
     const itmesHTML = feeds.map(feed => buildArtticlesForFeed(feed)).join('\n');
     arcticlesList.innerHTML = itmesHTML;
-
     feedsList.querySelector('.active').classList.remove('active');
     feedsList.querySelector(`[data-feed-id=${state.feedToShow}]`).classList.add('active');
   });
@@ -136,7 +140,6 @@ export default () => {
   formElement.addEventListener('submit', async (e) => {
     e.preventDefault();
     state.urlForm.state = 'waiting';
-
     const url = urlInput.value;
     try {
       const { data } = await axios.get(proxyUrl(url));
@@ -164,13 +167,8 @@ export default () => {
     const button = $(event.relatedTarget);
     const feedId = button.data('feed-id');
     const itemId = button.data('item-id');
-    const feed = state.feeds.find(({ id }) => id === feedId);
-    console.log(feed);
-    const { description, title, link } = feed.items.find(({ id }) => id === itemId);
-
+    const { description, title, link } = findItem(state.feeds, feedId, itemId);
     const modal = $(event.currentTarget);
-    console.log(modal);
-
     modal.find('.modal-title').text(title);
     modal.find('.description').html(description);
     modal.find('.open-link').attr('href', link);
