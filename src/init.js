@@ -138,44 +138,49 @@ export default () => {
   };
 
 
-  const addNewItems = async (feed, rss) => {
-    const rawRss = rss || await fetchRawRss(feed.url);
-    const items = parseItems(rawRss);
-    const existingItems = state.items.filter(article => article.feedId === feed.id);
-    const newArticles = items
-      .filter(article => isNewItem(article, existingItems))
-      .map(item => ({ ...item, feedId: feed.id }));
-    if (newArticles.length > 0) {
-      console.log(`Fetched ${newArticles.length} new items from ${feed.title}`);
-      state.items = [...newArticles, ...state.items];
-    }
+  const addNewItems = (feed, rawRssData) => {
+    const rawRssPromise = rawRssData ? Promise.resolve(rawRssData) : fetchRawRss(feed.url);
+    return rawRssPromise.then((rawRss) => {
+      const items = parseItems(rawRss);
+      const existingItems = state.items.filter(article => article.feedId === feed.id);
+      const newArticles = items
+        .filter(article => isNewItem(article, existingItems))
+        .map(item => ({ ...item, feedId: feed.id }));
+      if (newArticles.length > 0) {
+        console.log(`Fetched ${newArticles.length} new items from ${feed.title}`);
+        state.items = [...newArticles, ...state.items];
+      }
+    });
   };
 
   const startUpdating = (channel) => {
-    setTimeout(async () => {
+    setTimeout(() => {
       console.log(`Updating channel ${channel.title}`);
-      await addNewItems(channel);
-      startUpdating(channel);
+      addNewItems(channel)
+        .finally(() => {
+          startUpdating(channel);
+        });
     }, 5000);
   };
 
-  formElement.addEventListener('submit', async (e) => {
+  formElement.addEventListener('submit', (e) => {
     e.preventDefault();
     state.urlForm.state = 'waiting';
     const url = urlInput.value;
-    try {
-      const rawRss = await fetchRawRss(url);
-      const channelProps = parseChannel(rawRss);
-      const channel = { ...channelProps, url, id: uniqueId('feed_') };
-      state.channels = [channel, ...state.channels];
-      addNewItems(channel, rawRss);
-      startUpdating(channel);
-      state.urlForm.state = 'empty';
-      urlInput.value = '';
-    } catch (error) {
-      state.urlForm.state = 'invalid';
-      state.urlForm.errorMsg = 'Something wrong with this feed';
-    }
+    fetchRawRss(url)
+      .then((rawRss) => {
+        const channelProps = parseChannel(rawRss);
+        const channel = { ...channelProps, url, id: uniqueId('feed_') };
+        startUpdating(channel);
+        state.channels = [channel, ...state.channels];
+        state.urlForm.state = 'empty';
+        urlInput.value = '';
+        return addNewItems(channel, rawRss);
+      })
+      .catch(() => {
+        state.urlForm.state = 'invalid';
+        state.urlForm.errorMsg = 'Something wrong with this feed';
+      });
   });
 
   channelsList.addEventListener('click', (event) => {
