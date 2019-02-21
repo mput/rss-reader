@@ -1,9 +1,10 @@
 import '@babel/polyfill';
-import validator from 'validator';
-import { watch, callWatchers } from 'melanke-watchjs';
 import axios from 'axios';
+import validator from 'validator';
+import { watch } from 'melanke-watchjs';
+import { uniqueId } from 'lodash';
 
-import parseRSS from './parseRSS';
+import { parseChannel, parseItems } from './rssParser';
 
 
 const chenkItput = (url, presentFeeds) => {
@@ -16,40 +17,36 @@ const chenkItput = (url, presentFeeds) => {
   return false;
 };
 
-const findItem = (feeds, feedId, itemId) => {
-  const feed = feeds.find(({ id }) => id === feedId);
-  return feed.items.find(({ id }) => id === itemId);
-};
-
 const proxyUrl = url => `https://cors-anywhere.herokuapp.com/${url}`;
 
-const allFeedLink = `
-  <a class="feed-item list-group-item list-group-item-action list-group-item-light active" data-feed-id="all" href="#">
-    <div class="d-flex w-100 justify-content-between">
-      <h6 class="mb-1">All</h5>
-    </div>
-  </a>`;
+const isNewItem = (maybeNew, oldItems) => !oldItems.find(item => item.guid === maybeNew.guid);
+
+const allFeedsFilterLink = `
+<a class="feed-item list-group-item list-group-item-action list-group-item-light active" data-feed-id="all" href="#">
+  <div class="d-flex w-100 justify-content-between">
+    <h6 class="mb-1">All</h5>
+  </div>
+</a>`;
 
 const feedItemTemplate = ({ title, description, link, id }) => `
-  <a class="feed-item list-group-item list-group-item-action list-group-item-light" data-feed-id="${id}" href="#${link}">
-    <div class="d-flex w-100 justify-content-between">
-      <h6 class="mb-1">${title}</h5>
-    </div>
-    <p class="mb-1">${description}</p>
-  </a>`;
+<a class="feed-item list-group-item list-group-item-action list-group-item-light" data-feed-id="${id}" href="#${link}">
+  <div class="d-flex w-100 justify-content-between">
+    <h6 class="mb-1">${title}</h5>
+  </div>
+  <p class="mb-1">${description}</p>
+</a>`;
 
-const articleItemTemplate = (item, feedId) => `
-  <li class="list-group-item">
-    <button type="button" class="btn btn-outline-info btn-sm mr-2" data-toggle="modal" data-target="#modal" data-item-id="${item.id}" data-feed-id="${feedId}">Preview</button>
-    <a href="${item.link}">${item.title}</a>
-  </li> `;
-
-const buildArtticlesForFeed = feed => feed.items.map(item => articleItemTemplate(item, feed.id)).join('\n');
+const itemTemplate = ({ guid, feedId, title, link }) => `
+<li class="list-group-item">
+  <button type="button" class="btn btn-outline-info btn-sm mr-2" data-toggle="modal" data-target="#modal" data-guid="${guid}" data-feed-id="${feedId}">Preview</button>
+  <a href="${link}">${title}</a>
+</li> `;
 
 export default () => {
   const state = {
-    feeds: [],
-    feedToShow: 'all', // feedId
+    channels: [],
+    items: [],
+    chanelsFilter: 'all', // feedId
     urlForm: {
       state: 'empty', // valid, invalid, waiting
       errorMsg: '',
@@ -66,6 +63,9 @@ export default () => {
   const invalidFeedback = formElement.querySelector('.invalid-feedback');
   const submitBtn = formElement.querySelector('button[type="submit"]');
   const submitBtnSpinner = submitBtn.querySelector('.spinner-border');
+  const channelsList = document.querySelector('.feed');
+  const arcticlesList = document.querySelector('.articles-list');
+  const contentPane = document.querySelector('.content-row');
 
   watch(state, 'urlForm', () => {
     invalidFeedback.textContent = '';
@@ -99,27 +99,21 @@ export default () => {
   });
 
 
-  const feedsList = document.querySelector('.feed');
-  const arcticlesList = document.querySelector('.articles-list');
-  const contentPane = document.querySelector('.content-row');
-
-
-  watch(state, 'feeds', () => {
-    if (state.feeds.length > 0) {
+  watch(state, 'channels', () => {
+    if (state.channels.length > 0) {
       contentPane.classList.remove('d-none');
     }
-    const feeds = state.feeds.map(feed => feedItemTemplate(feed));
-    const feedsHTML = [allFeedLink, ...feeds].join('\n');
-    feedsList.innerHTML = feedsHTML;
-    callWatchers(state, 'feedToShow');
+    const feeds = state.channels.map(feed => feedItemTemplate(feed));
+    const feedsHTML = [allFeedsFilterLink, ...feeds].join('\n');
+    channelsList.innerHTML = feedsHTML;
   });
 
-  watch(state, 'feedToShow', () => {
-    const feeds = state.feedToShow === 'all' ? state.feeds : state.feeds.filter(({ id }) => id === state.feedToShow);
-    const itmesHTML = feeds.map(feed => buildArtticlesForFeed(feed)).join('\n');
+  watch(state, ['items', 'chanelsFilter'], () => {
+    const itemsToShow = state.chanelsFilter === 'all' ? state.items : state.items.filter(({ feedId }) => feedId === state.chanelsFilter);
+    const itmesHTML = itemsToShow.map(item => itemTemplate(item)).join('\n');
     arcticlesList.innerHTML = itmesHTML;
-    feedsList.querySelector('.active').classList.remove('active');
-    feedsList.querySelector(`[data-feed-id=${state.feedToShow}]`).classList.add('active');
+    channelsList.querySelector('.active').classList.remove('active');
+    channelsList.querySelector(`[data-feed-id=${state.chanelsFilter}]`).classList.add('active');
   });
 
   urlInput.addEventListener('input', (e) => {
@@ -128,7 +122,7 @@ export default () => {
       state.urlForm.state = 'empty';
       return;
     }
-    const error = chenkItput(url, state.feeds.map(feed => feed.url));
+    const error = chenkItput(url, state.channels.map(feed => feed.url));
     if (error) {
       state.urlForm.state = 'invalid';
       state.urlForm.errorMsg = error;
@@ -137,14 +131,45 @@ export default () => {
     }
   });
 
+  const fetchRawRss = async (url) => {
+    const { data } = await axios.get(proxyUrl(url));
+    console.log(`Loading feed from ${url}`);
+    return data;
+  };
+
+
+  const addNewItems = async (feed, rss) => {
+    const rawRss = rss || await fetchRawRss(feed.url);
+    const items = parseItems(rawRss);
+    const existingItems = state.items.filter(article => article.feedId === feed.id);
+    const newArticles = items
+      .filter(article => isNewItem(article, existingItems))
+      .map(item => ({ ...item, feedId: feed.id }));
+    if (newArticles.length > 0) {
+      console.log(`Fetched ${newArticles.length} new items from ${feed.title}`);
+      state.items = [...newArticles, ...state.items];
+    }
+  };
+
+  const startUpdating = (channel) => {
+    setTimeout(async () => {
+      console.log(`Updating channel ${channel.title}`);
+      await addNewItems(channel);
+      startUpdating(channel);
+    }, 5000);
+  };
+
   formElement.addEventListener('submit', async (e) => {
     e.preventDefault();
     state.urlForm.state = 'waiting';
     const url = urlInput.value;
     try {
-      const { data } = await axios.get(proxyUrl(url));
-      const feed = parseRSS(data);
-      state.feeds = [feed, ...state.feeds];
+      const rawRss = await fetchRawRss(url);
+      const channelProps = parseChannel(rawRss);
+      const channel = { ...channelProps, url, id: uniqueId('feed_') };
+      state.channels = [channel, ...state.channels];
+      addNewItems(channel, rawRss);
+      startUpdating(channel);
       state.urlForm.state = 'empty';
       urlInput.value = '';
     } catch (error) {
@@ -153,21 +178,22 @@ export default () => {
     }
   });
 
-  feedsList.addEventListener('click', (event) => {
+  channelsList.addEventListener('click', (event) => {
     event.preventDefault();
     const link = event.target.closest('.feed-item');
     if (!link) {
       return;
     }
     const id = link.dataset.feedId;
-    state.feedToShow = id;
+    state.chanelsFilter = id;
   });
 
   $('#modal').on('show.bs.modal', (event) => {
     const button = $(event.relatedTarget);
     const feedId = button.data('feed-id');
-    const itemId = button.data('item-id');
-    const { description, title, link } = findItem(state.feeds, feedId, itemId);
+    const guid = button.data('guid');
+    const { description, title, link } = state.items
+      .find(item => item.feedId === feedId && item.guid === guid);
     const modal = $(event.currentTarget);
     modal.find('.modal-title').text(title);
     modal.find('.description').html(description);
