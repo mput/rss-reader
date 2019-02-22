@@ -223,7 +223,7 @@ export default () => {
     const feedId = button.data('feed-id');
     const guid = button.data('guid');
     const { description, title, link } = state.items
-      .find(item => item.feedId === feedId && item.guid === guid);
+      .find(item => String(item.feedId) === String(feedId) && String(item.guid) === String(guid));
     const modal = $(e.currentTarget);
     modal.find('.modal-title').text(title);
     modal.find('.description').html(description);
