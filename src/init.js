@@ -189,9 +189,9 @@ export default () => {
     fetchFeed(url)
       .then((feed) => {
         const channel = { ...feed.channel, url, id: uniqueId('feed_') };
+        state.channels = [channel, ...state.channels];
         addNewItems(channel, feed.items);
         startUpdating(channel);
-        state.channels = [channel, ...state.channels];
         state.urlForm.state = 'empty';
         urlInput.value = '';
       })
