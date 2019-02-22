@@ -3,7 +3,6 @@ import axios from 'axios';
 import validator from 'validator';
 import { watch } from 'melanke-watchjs';
 import { uniqueId } from 'lodash';
-
 import parseRSS from './parseRSS';
 
 
@@ -66,8 +65,7 @@ export default () => {
     chanelsFilter: 'all', // feedId
     urlForm: {
       state: 'empty', // valid, invalid, waiting
-      errorMsg: '',
-      successMsg: '',
+      message: '',
     },
     message: {
       counter: 0,
@@ -85,34 +83,31 @@ export default () => {
   const contentPane = document.querySelector('.content-row');
   const toastContainer = document.querySelector('.toast-container');
 
-  const pushToast = (msg) => {
-    const messageId = uniqueId('toast-');
+  const pushToast = (msg, id) => {
+    const messageId = `toast-${id}`;
     const newMessege = toastTemplate(msg, messageId);
     $(toastContainer).append(newMessege);
     $(`#${messageId}`).toast('show');
   };
 
-  const addNewItems = (feed, feedItems) => {
-    const itemsPromise = feedItems ? Promise.resolve(feedItems)
-      : fetchFeed(feed.url).then(({ items }) => items);
-    return itemsPromise.then((items) => {
-      const existingItems = state.items.filter(article => article.feedId === feed.id);
-      const newArticles = items
-        .filter(article => isNewItem(article, existingItems))
-        .map(item => ({ ...item, feedId: feed.id }));
-      if (newArticles.length > 0) {
-        state.message = {
-          counter: state.message.counter + 1,
-          text: `Fetched ${newArticles.length} new items from <b>${feed.title}</b>`,
-        };
-        state.items = [...newArticles, ...state.items];
-      }
-    });
+  const addNewItems = (feed, items) => {
+    const existingItems = state.items.filter(article => article.feedId === feed.id);
+    const newArticles = items
+      .filter(article => isNewItem(article, existingItems))
+      .map(item => ({ ...item, feedId: feed.id }));
+    if (newArticles.length > 0) {
+      state.message = {
+        counter: state.message.counter + 1,
+        text: `Fetched ${newArticles.length} new items from <b>${feed.title}</b>`,
+      };
+      state.items = [...newArticles, ...state.items];
+    }
   };
 
   const startUpdating = (feed) => {
     setTimeout(() => {
-      addNewItems(feed)
+      fetchFeed(feed.url)
+        .then(({ items }) => addNewItems(feed, items))
         .finally(() => {
           startUpdating(feed);
         });
@@ -137,7 +132,7 @@ export default () => {
         urlInput.classList.add('is-invalid');
         submitBtnSpinner.classList.add('d-none');
         submitBtn.disabled = true;
-        invalidFeedback.textContent = state.urlForm.errorMsg;
+        invalidFeedback.textContent = state.urlForm.message;
         break;
       case 'valid':
         urlInput.classList.add('is-valid');
@@ -150,7 +145,6 @@ export default () => {
       default:
     }
   });
-
 
   watch(state, 'channels', () => {
     if (state.channels.length > 0) {
@@ -169,9 +163,8 @@ export default () => {
     channelsList.querySelector(`[data-feed-id=${state.chanelsFilter}]`).classList.add('active');
   });
 
-
   watch(state, 'message', () => {
-    pushToast(state.message.text);
+    pushToast(state.message.text, state.message.counter);
   });
 
   urlInput.addEventListener('input', (e) => {
@@ -183,7 +176,7 @@ export default () => {
     const error = chenkItput(url, state.channels.map(feed => feed.url));
     if (error) {
       state.urlForm.state = 'invalid';
-      state.urlForm.errorMsg = error;
+      state.urlForm.message = error;
     } else {
       state.urlForm.state = 'valid';
     }
@@ -196,15 +189,15 @@ export default () => {
     fetchFeed(url)
       .then((feed) => {
         const channel = { ...feed.channel, url, id: uniqueId('feed_') };
+        addNewItems(channel, feed.items);
         startUpdating(channel);
         state.channels = [channel, ...state.channels];
         state.urlForm.state = 'empty';
         urlInput.value = '';
-        return addNewItems(channel, feed.items);
       })
       .catch(() => {
         state.urlForm.state = 'invalid';
-        state.urlForm.errorMsg = 'Something wrong with this feed';
+        state.urlForm.message = 'Something wrong with this feed';
       });
   });
 
