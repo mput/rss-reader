@@ -9,20 +9,12 @@ const parseNode = (node, props) => props.reduce((acc, prop) => {
   return acc;
 }, {});
 
-const parseChannel = (data) => {
-  const parser = new DOMParser();
-  const feedDOM = parser.parseFromString(data, 'application/xml');
-  const channelNode = feedDOM.querySelector('channel');
-  const feed = parseNode(channelNode, channnelProps);
-  return feed;
-};
-
-const parseItems = (data) => {
+export default (data) => {
   const parser = new DOMParser();
   const feedDOM = parser.parseFromString(data, 'application/xml');
   const itemsNodes = feedDOM.getElementsByTagName('item');
+  const channelNode = feedDOM.querySelector('channel');
+  const channel = parseNode(channelNode, channnelProps);
   const items = [...itemsNodes].map(node => parseNode(node, itemProps));
-  return items;
+  return { channel, items };
 };
-
-export { parseChannel, parseItems };
