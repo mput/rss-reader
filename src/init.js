@@ -19,28 +19,44 @@ const chenkItput = (url, presentFeeds) => {
 
 const proxyUrl = url => `https://cors-anywhere.herokuapp.com/${url}`;
 
+const fetchRawRss = url => axios.get(proxyUrl(url)).then(({ data }) => data);
+
 const isNewItem = (maybeNew, oldItems) => !oldItems.find(item => item.guid === maybeNew.guid);
 
 const allFeedsFilterLink = `
-<a class="feed-item list-group-item list-group-item-action list-group-item-light active" data-feed-id="all" href="#">
-  <div class="d-flex w-100 justify-content-between">
-    <h6 class="mb-1">All</h5>
-  </div>
-</a>`;
+  <a class="feed-item list-group-item list-group-item-action active" data-feed-id="all" href="#">
+    <div class="d-flex w-100 justify-content-between">
+      <h6 class="mb-1">All</h5>
+    </div>
+  </a>`;
 
 const feedItemTemplate = ({ title, description, link, id }) => `
-<a class="feed-item list-group-item list-group-item-action list-group-item-light" data-feed-id="${id}" href="#${link}">
-  <div class="d-flex w-100 justify-content-between">
-    <h6 class="mb-1">${title}</h5>
-  </div>
-  <p class="mb-1">${description}</p>
-</a>`;
+  <a class="feed-item list-group-item list-group-item-action" data-feed-id="${id}" href="#${link}">
+    <div class="d-flex w-100 justify-content-between">
+      <h6 class="mb-1">${title}</h5>
+    </div>
+    <p class="mb-1">${description}</p>
+  </a>`;
 
 const itemTemplate = ({ guid, feedId, title, link }) => `
-<li class="list-group-item">
-  <button type="button" class="btn btn-outline-info btn-sm mr-2" data-toggle="modal" data-target="#modal" data-guid="${guid}" data-feed-id="${feedId}">Preview</button>
-  <a href="${link}">${title}</a>
-</li> `;
+  <li class="list-group-item">
+    <button type="button" class="btn btn-outline-info btn-sm mr-2" data-toggle="modal" data-target="#modal" data-guid="${guid}" data-feed-id="${feedId}">Preview</button>
+    <a href="${link}">${title}</a>
+  </li> `;
+
+const toastTemplate = (msg, id, delay = 8000) => `
+  <div id=${id} class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-delay="${delay}">
+    <div class="toast-header">
+      <strong class="mr-auto">RSS Reader</strong>
+      <small class="text-muted">Update</small>
+      <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+    <div class="toast-body">
+      ${msg}
+    </div>
+  </div>`;
 
 export default () => {
   const state = {
@@ -52,9 +68,9 @@ export default () => {
       errorMsg: '',
       successMsg: '',
     },
-    alerts: {
-      success: '',
-      danger: '',
+    message: {
+      counter: 0,
+      text: '',
     },
   };
 
@@ -66,6 +82,42 @@ export default () => {
   const channelsList = document.querySelector('.feed');
   const arcticlesList = document.querySelector('.articles-list');
   const contentPane = document.querySelector('.content-row');
+  const toastContainer = document.querySelector('.toast-container');
+
+  const pushToast = (msg) => {
+    const messageId = uniqueId('toast-');
+    const newMessege = toastTemplate(msg, messageId);
+    $(toastContainer).append(newMessege);
+    $(`#${messageId}`).toast('show');
+  };
+
+  const addNewItems = (feed, rawRssData) => {
+    const rawRssPromise = rawRssData ? Promise.resolve(rawRssData) : fetchRawRss(feed.url);
+    return rawRssPromise.then((rawRss) => {
+      const items = parseItems(rawRss);
+      const existingItems = state.items.filter(article => article.feedId === feed.id);
+      const newArticles = items
+        .filter(article => isNewItem(article, existingItems))
+        .map(item => ({ ...item, feedId: feed.id }));
+      if (newArticles.length > 0) {
+        state.message = {
+          counter: state.message.counter + 1,
+          text: `Fetched ${newArticles.length} new items from <b>${feed.title}</b>`,
+        };
+        state.items = [...newArticles, ...state.items];
+      }
+    });
+  };
+
+  const startUpdating = (channel) => {
+    setTimeout(() => {
+      addNewItems(channel)
+        .finally(() => {
+          startUpdating(channel);
+        });
+    }, 5000);
+  };
+
 
   watch(state, 'urlForm', () => {
     invalidFeedback.textContent = '';
@@ -116,6 +168,11 @@ export default () => {
     channelsList.querySelector(`[data-feed-id=${state.chanelsFilter}]`).classList.add('active');
   });
 
+
+  watch(state, 'message', () => {
+    pushToast(state.message.text);
+  });
+
   urlInput.addEventListener('input', (e) => {
     const url = e.target.value;
     if (url === '') {
@@ -130,38 +187,6 @@ export default () => {
       state.urlForm.state = 'valid';
     }
   });
-
-  const fetchRawRss = async (url) => {
-    const { data } = await axios.get(proxyUrl(url));
-    console.log(`Loading feed from ${url}`);
-    return data;
-  };
-
-
-  const addNewItems = (feed, rawRssData) => {
-    const rawRssPromise = rawRssData ? Promise.resolve(rawRssData) : fetchRawRss(feed.url);
-    return rawRssPromise.then((rawRss) => {
-      const items = parseItems(rawRss);
-      const existingItems = state.items.filter(article => article.feedId === feed.id);
-      const newArticles = items
-        .filter(article => isNewItem(article, existingItems))
-        .map(item => ({ ...item, feedId: feed.id }));
-      if (newArticles.length > 0) {
-        console.log(`Fetched ${newArticles.length} new items from ${feed.title}`);
-        state.items = [...newArticles, ...state.items];
-      }
-    });
-  };
-
-  const startUpdating = (channel) => {
-    setTimeout(() => {
-      console.log(`Updating channel ${channel.title}`);
-      addNewItems(channel)
-        .finally(() => {
-          startUpdating(channel);
-        });
-    }, 5000);
-  };
 
   formElement.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -183,9 +208,9 @@ export default () => {
       });
   });
 
-  channelsList.addEventListener('click', (event) => {
-    event.preventDefault();
-    const link = event.target.closest('.feed-item');
+  channelsList.addEventListener('click', (e) => {
+    e.preventDefault();
+    const link = e.target.closest('.feed-item');
     if (!link) {
       return;
     }
@@ -193,13 +218,13 @@ export default () => {
     state.chanelsFilter = id;
   });
 
-  $('#modal').on('show.bs.modal', (event) => {
-    const button = $(event.relatedTarget);
+  $('#modal').on('show.bs.modal', (e) => {
+    const button = $(e.relatedTarget);
     const feedId = button.data('feed-id');
     const guid = button.data('guid');
     const { description, title, link } = state.items
       .find(item => item.feedId === feedId && item.guid === guid);
-    const modal = $(event.currentTarget);
+    const modal = $(e.currentTarget);
     modal.find('.modal-title').text(title);
     modal.find('.description').html(description);
     modal.find('.open-link').attr('href', link);
