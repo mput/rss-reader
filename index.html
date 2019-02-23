@@ -13,20 +13,18 @@
     <div class="container mt-3">
 
       <div class="row">
-        <div class="col"></div>
-        <div class="col-12 col-md-10 col-lg-8 col-xl-7 pl-3">
+        <div class="col">
           <div class="add-form py-4">
             <label class="display-4 mb-3 ml-1" for="add-url">Add RSS:</label>
             <form class="input-group" id="add-url" novalidate>
               <input class="form-control form-control-lg" id="rss-url" type="text" name="rss-url" placeholder="https://">
               <div class="input-group-append">
-                <button class="btn btn-outline-secondary" type="submit" disabled>
+                <button class="btn btn-outline-primary" type="submit" disabled>
                   <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                   Add
                 </button>
               </div>
               <div class="invalid-feedback">
-                Something goes wrong
               </div>
               <div class="valid-feedback">
                 Looks good!
@@ -34,18 +32,17 @@
             </form>
           </div>
         </div>
-        <div class="col"></div>
       </div>
 
       <div class="content-row row d-none">
-        <aside class="col-12 col-md-5 col-lg-4 pl-3">
-          <h2 class="pt-3 pl-4">Feeds:</h2>
-          <div class="list-group feed mt-4">
+        <aside class="pt-3 col-12 col-md-5">
+          <h2 class="pl-4">Feeds:</h2>
+          <div class="channels mt-4">
           </div>
         </aside>
 
-        <div class="col articles-col ">
-          <h2 class="pt-3 pl-4">Articles:</h2>
+        <div class="pt-3 col articles-col ">
+          <h2 class="pl-4">Articles:</h2>
           <div class="rss-link-list mt-2">
             <ul class="articles-list list-group list-group-flush">
             </ul>
@@ -75,7 +72,7 @@
       </div>
     </div>
 
-    <div class="toast-container" style="position: absolute; top: 20px; right: 20px;">
+    <div class="toast-container">
     </div>
   </body>
 

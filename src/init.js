@@ -2,9 +2,17 @@ import '@babel/polyfill';
 import axios from 'axios';
 import validator from 'validator';
 import { watch } from 'melanke-watchjs';
-import { uniqueId } from 'lodash';
+import { uniqueId, sample } from 'lodash';
 import parseRSS from './parseRSS';
 
+const updateInterval = 8000;
+const CORSproxys = ['https://cors-anywhere.herokuapp.com/', 'https://cors.io/?'];
+const proxyUrl = url => `${sample(CORSproxys)}${url}`;
+
+const fetchFeed = url => axios.get(proxyUrl(url))
+  .then(({ data }) => parseRSS(data));
+
+const isNewItem = (maybeNew, oldItems) => !oldItems.find(item => item.guid === maybeNew.guid);
 
 const chenkItput = (url, presentFeeds) => {
   if (!validator.isURL(url)) {
@@ -16,31 +24,20 @@ const chenkItput = (url, presentFeeds) => {
   return false;
 };
 
-const proxyUrl = url => `https://cors-anywhere.herokuapp.com/${url}`;
-
-const fetchFeed = url => axios.get(proxyUrl(url))
-  .then(({ data }) => parseRSS(data));
-
-const isNewItem = (maybeNew, oldItems) => !oldItems.find(item => item.guid === maybeNew.guid);
-
 const allFeedsFilterLink = `
   <a class="feed-item list-group-item list-group-item-action active" data-feed-id="all" href="#">
-    <div class="d-flex w-100 justify-content-between">
-      <h6 class="mb-1">All</h5>
-    </div>
+    <p class="mb-1"><strong>All chanels</strong></p>
   </a>`;
 
 const feedItemTemplate = ({ title, description, link, id }) => `
-  <a class="feed-item list-group-item list-group-item-action" data-feed-id="${id}" href="#${link}">
-    <div class="d-flex w-100 justify-content-between">
-      <h6 class="mb-1">${title}</h5>
-    </div>
+  <a class="feed-item list-group-item list-group-item-action pt-3 pb-2" data-feed-id="${id}" href="#${link}">
+    <p class="mb-1"><strong>${title}</strong></p>
     <p class="mb-1">${description}</p>
   </a>`;
 
 const itemTemplate = ({ guid, feedId, title, link }) => `
-  <li class="list-group-item">
-    <button type="button" class="btn btn-outline-info btn-sm mr-2" data-toggle="modal" data-target="#modal" data-guid="${guid}" data-feed-id="${feedId}">Preview</button>
+  <li class="list-group-item d-flex">
+    <button type="button" class="btn btn-outline-primary btn-sm mr-2 align-self-center" data-toggle="modal" data-target="#modal" data-guid="${guid}" data-feed-id="${feedId}">Preview</button>
     <a href="${link}">${title}</a>
   </li> `;
 
@@ -78,17 +75,24 @@ export default () => {
   const invalidFeedback = formElement.querySelector('.invalid-feedback');
   const submitBtn = formElement.querySelector('button[type="submit"]');
   const submitBtnSpinner = submitBtn.querySelector('.spinner-border');
-  const channelsList = document.querySelector('.feed');
-  const arcticlesList = document.querySelector('.articles-list');
+
   const contentPane = document.querySelector('.content-row');
+  const channelsList = document.querySelector('.channels');
+  const arcticlesList = document.querySelector('.articles-list');
   const toastContainer = document.querySelector('.toast-container');
 
-  const pushToast = (msg, id) => {
+  const pushToast = (msg, id, delay) => {
     const messageId = `toast-${id}`;
-    const newMessege = toastTemplate(msg, messageId);
+    const newMessege = toastTemplate(msg, messageId, delay);
     $(toastContainer).append(newMessege);
-    $(`#${messageId}`).toast('show');
+    const toastElm = $(`#${messageId}`);
+    toastElm.toast('show');
+    setTimeout(() => toastElm.remove(), delay + 100);
   };
+
+  const findItem = (feedId, guid) => state.items
+    .find(item => String(item.feedId) === String(feedId)
+      && String(item.guid) === String(guid));
 
   const addNewItems = (feed, items) => {
     const existingItems = state.items.filter(article => article.feedId === feed.id);
@@ -111,8 +115,16 @@ export default () => {
         .finally(() => {
           startUpdating(feed);
         });
-    }, 5000);
+    }, updateInterval);
   };
+
+  const addNewFeed = url => fetchFeed(url)
+    .then((feed) => {
+      const channel = { ...feed.channel, url, id: uniqueId('feed_') };
+      state.channels = [channel, ...state.channels];
+      addNewItems(channel, feed.items);
+      startUpdating(channel);
+    });
 
 
   watch(state, 'urlForm', () => {
@@ -127,6 +139,7 @@ export default () => {
       case 'empty':
         submitBtnSpinner.classList.add('d-none');
         submitBtn.disabled = true;
+        urlInput.value = '';
         break;
       case 'invalid':
         urlInput.classList.add('is-invalid');
@@ -164,7 +177,7 @@ export default () => {
   });
 
   watch(state, 'message', () => {
-    pushToast(state.message.text, state.message.counter);
+    pushToast(state.message.text, state.message.counter, 4000);
   });
 
   urlInput.addEventListener('input', (e) => {
@@ -186,14 +199,9 @@ export default () => {
     e.preventDefault();
     state.urlForm.state = 'waiting';
     const url = urlInput.value;
-    fetchFeed(url)
-      .then((feed) => {
-        const channel = { ...feed.channel, url, id: uniqueId('feed_') };
-        state.channels = [channel, ...state.channels];
-        addNewItems(channel, feed.items);
-        startUpdating(channel);
+    addNewFeed(url)
+      .then(() => {
         state.urlForm.state = 'empty';
-        urlInput.value = '';
       })
       .catch(() => {
         state.urlForm.state = 'invalid';
@@ -215,11 +223,16 @@ export default () => {
     const button = $(e.relatedTarget);
     const feedId = button.data('feed-id');
     const guid = button.data('guid');
-    const { description, title, link } = state.items
-      .find(item => String(item.feedId) === String(feedId) && String(item.guid) === String(guid));
+    const { description, title, link } = findItem(feedId, guid);
     const modal = $(e.currentTarget);
     modal.find('.modal-title').text(title);
     modal.find('.description').html(description);
     modal.find('.open-link').attr('href', link);
   });
+
+  const startWithFeeds = [
+    'http://lorem-rss.herokuapp.com/feed?unit=second&interval=10',
+    'https://habr.com/ru/rss/best/weekly/?fl=ru',
+  ];
+  Promise.all(startWithFeeds.map(url => addNewFeed(url).catch(console.log)));
 };

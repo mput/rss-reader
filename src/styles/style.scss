@@ -1,1 +1,16 @@
+$primary:#035668;
+
 @import "~bootstrap/scss/bootstrap";
+
+.modal img {
+  max-width: 80%;
+  display: block;
+  margin: 0 auto;
+}
+
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: $zindex-fixed;
+}
